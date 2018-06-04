@@ -10,16 +10,20 @@
 #define HUD_PRINTTALK		3
 #define HUD_PRINTCENTER		4
 
-//#define DEVELOPER
+#define DEVELOPER
 
 #if defined DEVELOPER
-	#define URL_CHAT "http://localhost:3008/chat"
-	#define URL_FEED "http://localhost:3008/feed"
-	#define URL_PING "http://localhost:3008/heartbeat"
+	#define URL_CHAT  "http://localhost:3008/chat"
+	#define URL_FEED  "http://localhost:3008/feed"
+	#define URL_PING  "http://localhost:3008/heartbeat"
+	#define URL_JOIN  "http://localhost:3008/playerjoin"
+	#define URL_LEAVE "http://localhost:3008/playerleave"
 #else
-	#define URL_CHAT "https://killfeed.herokuapp.com/chat"
-	#define URL_FEED "https://killfeed.herokuapp.com/feed"
-	#define URL_PING "https://killfeed.herokuapp.com/heartbeat"
+	#define URL_CHAT  "https://killfeed.herokuapp.com/chat"
+	#define URL_FEED  "https://killfeed.herokuapp.com/feed"
+	#define URL_PING  "https://killfeed.herokuapp.com/heartbeat"
+	#define URL_JOIN  "https://killfeed.herokuapp.com/playerjoin"
+	#define URL_LEAVE "https://killfeed.herokuapp.com/playerleave"
 #endif
 
 public Plugin myinfo = 
@@ -36,32 +40,33 @@ char g_strSecret[PLATFORM_MAX_PATH];
 
 public void OnPluginStart()
 {
-	//FindConVar("sv_visiblemaxplayers").AddChangeHook(OnConVarChanged);
-	//FindConVar("hostname").AddChangeHook(OnConVarChanged);
-	//FindConVar("tf_bot_count").AddChangeHook(OnConVarChanged);
-	
 	g_cSecretKey = CreateConVar("killfeed_secret", "DEFAULT", 
-								"Change this from DEFAULT to something secret or killfeed will not function.", 
-								FCVAR_DONTRECORD|FCVAR_PROTECTED);
-	
+                                "Change this from DEFAULT to something secret or killfeed will not function.", 
+                                FCVAR_DONTRECORD|FCVAR_PROTECTED);
+	 
 	
 	//Chat
 	HookUserMessage(GetUserMessageId("SayText"),  SayText);
 	HookUserMessage(GetUserMessageId("SayText2"), SayText2);
 	HookUserMessage(GetUserMessageId("TextMsg"),  TextMsg);
 	
-	//Connect & Disconnect
-	HookEvent("player_connect",    Event_ConnectDisconnect, EventHookMode_Post);
-	HookEvent("player_disconnect", Event_ConnectDisconnect, EventHookMode_Post);
-
 	//Killfeed
 	HookEvent("player_death",     Event_Death, EventHookMode_Post);
 	HookEvent("object_destroyed", Event_Death, EventHookMode_Post);
 	
-	//PrintToChatAll("\x01 1 .. \x02 2 .. \x03 3 .. \x04 4 .. \x05 5 .. \x06 6 .. \x07 7 .. \x08 8");
-	
 	//Server online.
 	SteamWorks_SteamServersConnected();
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if(!IsClientInGame(i))
+			continue;
+		
+		if(!IsClientAuthorized(i))
+			continue;
+			
+		OnClientAuthorized(i, "");
+	}
 }
 
 public int SteamWorks_SteamServersConnected()
@@ -100,8 +105,7 @@ public void HeartBeat()
 	
 	char servermap[64];
 	GetCurrentMap(servermap, sizeof(servermap));
-	
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
+
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "hostname", serverName);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "playercount", IntToStringEx(GetPlayerCount()));
 	
@@ -119,45 +123,56 @@ public void HeartBeat()
 	CreateTimer(30.0, Timer_HeartBeat);
 }
 
-public Action Timer_HeartBeat(Handle timer, any data)
+//Inform website that a player has joined
+public void OnClientAuthorized(int client, const char[] auth)
 {
-	HeartBeat();
-}
-
-public void Event_ConnectDisconnect(Event event, const char[] eventname, bool dontBroadcast)
-{
-	bool bIsABot = event.GetBool("bot");
-	if (bIsABot && (dontBroadcast || event.GetInt("BroadcastDisabled") > 0))
+	if(GameRules_GetProp("m_bPlayingMannVsMachine") && IsFakeClient(client))
 		return;
-
-	Handle hRequest = CreatePostRequest(URL_CHAT);
+	
+	char auth64[64];
+	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
+		return;
+	
+	char name[64];
+	GetClientName(client, name, sizeof(name));	
+	
+	Handle hRequest = CreatePostRequest(URL_JOIN);
 	if(hRequest == null)
 		return;
 	
-	char message[512];
-	event.GetString("name", message, sizeof(message));
-	
-	if(StrEqual(eventname, "player_disconnect"))
-	{
-		char reason[64];
-		event.GetString("reason", reason, sizeof(reason));
-		
-		Format(message, sizeof(message), "%s left the game (%s)", message, reason);
-	}
-	else if(StrEqual(eventname, "player_connect"))
-	{
-		Format(message, sizeof(message), "%s has joined the game", message);
-	}
-	
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", "");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "type", "ConnectDisConnect");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "sender", "SERVER");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team", "5");
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "message", message);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "name", name);
 	
 	SteamWorks_SendHTTPRequest(hRequest);
 	delete hRequest;
+}
+
+public void OnClientDisconnect(int client)
+{
+	if(GameRules_GetProp("m_bPlayingMannVsMachine") && IsFakeClient(client))
+		return;
+	
+	char auth64[64];
+	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
+		return;
+	
+	char name[64];
+	GetClientName(client, name, sizeof(name));	
+	
+	Handle hRequest = CreatePostRequest(URL_LEAVE);
+	if(hRequest == null)
+		return;
+	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "name", name);
+	
+	SteamWorks_SendHTTPRequest(hRequest);
+	delete hRequest;
+}
+
+public Action Timer_HeartBeat(Handle timer, any data)
+{
+	HeartBeat();
 }
 
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
@@ -187,7 +202,6 @@ public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 	char weapon_logclassname[64];
 	event.GetString("weapon", weapon_logclassname, sizeof(weapon_logclassname));
 	
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "event", name);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "weapon", weapon_logclassname);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "attacker", attacker);
@@ -236,7 +250,6 @@ public Action SayText(UserMsg msg_id, BfRead msg, const int[] players, int playe
 	if(hRequest == null)
 		return Plugin_Continue;
 
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", "");
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "type", pText);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "sender", "SERVER");
@@ -286,9 +299,7 @@ public Action SayText2(UserMsg msg_id, BfRead msg, const int[] players, int play
 	Handle hRequest = CreatePostRequest(URL_CHAT);
 	if(hRequest == null)
 		return Plugin_Continue;
-	
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
-	
+		
 	if(iSender > 0 && IsClientInGame(iSender))
 	{
 		char auth64[64];
@@ -337,7 +348,6 @@ public Action TextMsg(UserMsg msg_id, BfRead msg, const int[] players, int playe
 		if(hRequest == null)
 			return Plugin_Continue;
 		
-		SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
 		SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", "");
 		SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "type", msg_name);
 		SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "sender", "SERVER");
@@ -479,6 +489,7 @@ public Handle CreatePostRequest(const char[] destination)
 		return null;
 	}
 	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "secret", g_strSecret);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "serverid", Buffer);
 	
 	return hRequest;
