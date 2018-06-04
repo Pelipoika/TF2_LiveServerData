@@ -10,7 +10,7 @@
 #define HUD_PRINTTALK		3
 #define HUD_PRINTCENTER		4
 
-#define DEVELOPER
+//#define DEVELOPER
 
 #if defined DEVELOPER
 	#define URL_CHAT  "http://localhost:3008/chat"
