@@ -18,12 +18,14 @@
 	#define URL_PING  "http://localhost:3008/heartbeat"
 	#define URL_JOIN  "http://localhost:3008/playerjoin"
 	#define URL_LEAVE "http://localhost:3008/playerleave"
+	#define URL_INFO  "http://localhost:3008/infochanged"
 #else
 	#define URL_CHAT  "https://killfeed.herokuapp.com/chat"
 	#define URL_FEED  "https://killfeed.herokuapp.com/feed"
 	#define URL_PING  "https://killfeed.herokuapp.com/heartbeat"
 	#define URL_JOIN  "https://killfeed.herokuapp.com/playerjoin"
 	#define URL_LEAVE "https://killfeed.herokuapp.com/playerleave"
+	#define URL_INFO  "https://killfeed.herokuapp.com/infochanged"
 #endif
 
 public Plugin myinfo = 
@@ -54,20 +56,45 @@ public void OnPluginStart()
 	HookEvent("player_death",     Event_Death, EventHookMode_Post);
 	HookEvent("object_destroyed", Event_Death, EventHookMode_Post);
 	
+	//Player info changed.
+	HookEvent("player_score_changed", Event_Scored,      EventHookMode_Post);
+	HookEvent("player_changeclass",   Event_ChangeClass, EventHookMode_Post);
+	
 	//Server online.
-	SteamWorks_SteamServersConnected();
+	SteamWorks_SteamServersConnected();	
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if(!IsClientInGame(i))
 			continue;
-		
-		if(!IsClientAuthorized(i))
-			continue;
 			
 		OnClientAuthorized(i, "");
 	}
 }
+
+/*
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	PrintToServer("AskPluginLoad2 late %i", late);
+
+	if(late)
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			PrintToServer("AskPluginLoad2 LATE");
+			
+			if(!IsClientInGame(i))
+				continue;
+				
+			OnClientAuthorized(i, "");
+			
+			PrintToServer("OnClientAuthorized %N LATE LOAD", i);
+		}
+	}
+	
+	return APLRes_Success;
+}
+*/
 
 public int SteamWorks_SteamServersConnected()
 {
@@ -173,6 +200,56 @@ public void OnClientDisconnect(int client)
 public Action Timer_HeartBeat(Handle timer, any data)
 {
 	HeartBeat();
+}
+
+public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = event.GetInt("player");
+	if(!IsClientInGame(client) || IsFakeClient(client))
+		return;
+	
+	char auth64[64];
+	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
+		return;
+		
+	Handle hRequest = CreatePostRequest(URL_INFO);
+	if(hRequest == null)
+		return;
+
+	int PlayerResource = GetPlayerResourceEntity();
+
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "score",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client)));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iPlayerClass",       _, client)));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "damage",  IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client)));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "tank",    IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client)));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "healing", IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client)));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "money",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client)));
+	SteamWorks_SendHTTPRequest(hRequest);
+	
+	delete hRequest;
+}
+
+public void Event_ChangeClass(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(!IsClientInGame(client) || IsFakeClient(client))
+		return;
+	
+	char auth64[64];
+	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
+		return;
+		
+	Handle hRequest = CreatePostRequest(URL_INFO);
+	if(hRequest == null)
+		return;
+
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(event.GetInt("class")));
+	SteamWorks_SendHTTPRequest(hRequest);
+	delete hRequest;
+	
+	//PrintToServer("player_changeclass %N %i", client, event.GetInt("class"));
 }
 
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
