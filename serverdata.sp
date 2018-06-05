@@ -59,6 +59,8 @@ public void OnPluginStart()
 	//Player info changed.
 	HookEvent("player_score_changed", Event_Scored,      EventHookMode_Post);
 	HookEvent("player_changeclass",   Event_ChangeClass, EventHookMode_Post);
+	HookEvent("player_team",          Event_PlayerTeam,  EventHookMode_Post);
+	HookEvent("player_spawn",         Event_PlayerTeam,  EventHookMode_Post);
 	
 	//Server online.
 	SteamWorks_SteamServersConnected();	
@@ -220,7 +222,6 @@ public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "score",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client)));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iPlayerClass",       _, client)));
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "damage",  IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client)));
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "tank",    IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client)));
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "healing", IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client)));
@@ -251,6 +252,29 @@ public void Event_ChangeClass(Event event, const char[] name, bool dontBroadcast
 	
 	//PrintToServer("player_changeclass %N %i", client, event.GetInt("class"));
 }
+
+
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(!IsClientInGame(client) || IsFakeClient(client))
+		return;
+	
+	char auth64[64];
+	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
+		return;
+		
+	Handle hRequest = CreatePostRequest(URL_INFO);
+	if(hRequest == null)
+		return;
+
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(view_as<int>(TF2_GetPlayerClass(client))));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(event.GetInt("team")));
+	SteamWorks_SendHTTPRequest(hRequest);
+	delete hRequest;
+}
+
 
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
 {
