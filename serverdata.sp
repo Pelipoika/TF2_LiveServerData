@@ -277,6 +277,7 @@ public void Event_ChangeClass(Event event, const char[] name, bool dontBroadcast
 
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(event.GetInt("class")));
+	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(event.GetInt("team")));
 	SteamWorks_SendHTTPRequest(hRequest);
 	delete hRequest;
 	
@@ -299,7 +300,6 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(view_as<int>(TF2_GetPlayerClass(client))));
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(event.GetInt("team")));
 	SteamWorks_SendHTTPRequest(hRequest);
 	delete hRequest;
