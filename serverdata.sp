@@ -204,6 +204,14 @@ public Action Timer_HeartBeat(Handle timer, any data)
 	HeartBeat();
 }
 
+//iTotalScore
+//iDamage
+//iDamageBoss
+//iHealing
+//iCurrencyCollected
+//iClass
+int g_iCachedValues[MAXPLAYERS + 1][5];
+
 public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = event.GetInt("player");
@@ -219,14 +227,36 @@ public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int PlayerResource = GetPlayerResourceEntity();
-
+	
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "score",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client)));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "damage",  IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client)));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "tank",    IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client)));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "healing", IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client)));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "money",   IntToStringEx(GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client)));
-	SteamWorks_SendHTTPRequest(hRequest);
+
+	//Get
+	int iTotalScore        = (GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client));
+	int iDamage            = (GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client));
+	int iDamageBoss        = (GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client));
+	int iHealing           = (GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client));
+	int iCurrencyCollected = (GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client));
+	
+	bool bChanges = false;
+	
+	//Check cache for changes
+	if(g_iCachedValues[client][0] != iTotalScore)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "score",   IntToStringEx(iTotalScore));        bChanges = true;}
+	if(g_iCachedValues[client][1] != iDamage)            { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "damage",  IntToStringEx(iDamage));            bChanges = true;}
+	if(g_iCachedValues[client][2] != iDamageBoss)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "tank",    IntToStringEx(iDamageBoss));        bChanges = true;}
+	if(g_iCachedValues[client][3] != iHealing)           { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "healing", IntToStringEx(iHealing));           bChanges = true;}
+	if(g_iCachedValues[client][4] != iCurrencyCollected) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "money",   IntToStringEx(iCurrencyCollected)); bChanges = true;}
+
+	//Send changes
+	if(bChanges) {
+		SteamWorks_SendHTTPRequest(hRequest);
+	}
+	
+	//Cache
+	g_iCachedValues[client][0] = iTotalScore;
+	g_iCachedValues[client][1] = iDamage;
+	g_iCachedValues[client][2] = iDamageBoss;
+	g_iCachedValues[client][3] = iHealing;
+	g_iCachedValues[client][4] = iCurrencyCollected;
 	
 	delete hRequest;
 }
