@@ -58,7 +58,7 @@ public void OnPluginStart()
 	
 	//Player info changed.
 	HookEvent("player_score_changed", Event_Scored,      EventHookMode_Post);
-	HookEvent("player_changeclass",   Event_ChangeClass, EventHookMode_Post);
+	HookEvent("player_changeclass",   Event_PlayerTeam, EventHookMode_Post);
 	HookEvent("player_team",          Event_PlayerTeam,  EventHookMode_Post);
 	HookEvent("player_spawn",         Event_PlayerTeam,  EventHookMode_Post);
 	
@@ -71,32 +71,14 @@ public void OnPluginStart()
 			continue;
 			
 		OnClientAuthorized(i, "");
+		
+		//Fake it till you make it.
+		Event event = CreateEvent("player_team");
+		event.SetInt("userid", GetClientUserId(i));
+		Event_PlayerTeam(event, "player_team", false);
+		delete event;
 	}
 }
-
-/*
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	PrintToServer("AskPluginLoad2 late %i", late);
-
-	if(late)
-	{
-		for (int i = 1; i <= MaxClients; i++)
-		{
-			PrintToServer("AskPluginLoad2 LATE");
-			
-			if(!IsClientInGame(i))
-				continue;
-				
-			OnClientAuthorized(i, "");
-			
-			PrintToServer("OnClientAuthorized %N LATE LOAD", i);
-		}
-	}
-	
-	return APLRes_Success;
-}
-*/
 
 public int SteamWorks_SteamServersConnected()
 {
@@ -176,6 +158,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	delete hRequest;
 }
 
+//Inform website that a player has left
 public void OnClientDisconnect(int client)
 {
 	if(GameRules_GetProp("m_bPlayingMannVsMachine") && IsFakeClient(client))
@@ -199,18 +182,20 @@ public void OnClientDisconnect(int client)
 	delete hRequest;
 }
 
+//Send server info that we are still alive.
 public Action Timer_HeartBeat(Handle timer, any data)
 {
 	HeartBeat();
 }
 
-//iTotalScore
-//iDamage
-//iDamageBoss
-//iHealing
-//iCurrencyCollected
-//iClass
-int g_iCachedValues[MAXPLAYERS + 1][5];
+//0 iTotalScore
+//1 iDamage
+//2 iDamageBoss
+//3 iHealing
+//4 iCurrencyCollected
+//5 iClass
+//6 iTeam
+int g_iCachedValues[MAXPLAYERS + 1][10];
 
 public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 {
@@ -232,11 +217,12 @@ public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 
 	//Get
 	int iTotalScore        = (GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client));
-	int iDamage            = (GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client));
+	int iDamage            = (GetEntProp(PlayerResource, Prop_Send, "m_iDamage",            _, client) + GetEntProp(PlayerResource, Prop_Send, "m_iDamageAssist", _, client));
 	int iDamageBoss        = (GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client));
 	int iHealing           = (GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client));
 	int iCurrencyCollected = (GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client));
 	
+	//Do we have any changes?
 	bool bChanges = false;
 	
 	//Check cache for changes
@@ -261,30 +247,6 @@ public void Event_Scored(Event event, const char[] name, bool dontBroadcast)
 	delete hRequest;
 }
 
-public void Event_ChangeClass(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!IsClientInGame(client) || IsFakeClient(client))
-		return;
-	
-	char auth64[64];
-	if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
-		return;
-		
-	Handle hRequest = CreatePostRequest(URL_INFO);
-	if(hRequest == null)
-		return;
-
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(event.GetInt("class")));
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(event.GetInt("team")));
-	SteamWorks_SendHTTPRequest(hRequest);
-	delete hRequest;
-	
-	//PrintToServer("player_changeclass %N %i", client, event.GetInt("class"));
-}
-
-
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
@@ -298,10 +260,30 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	Handle hRequest = CreatePostRequest(URL_INFO);
 	if(hRequest == null)
 		return;
-
+		
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
-	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(event.GetInt("team")));
-	SteamWorks_SendHTTPRequest(hRequest);
+		
+	//Get
+	int iClass = view_as<int>(TF2_GetPlayerClass(client))
+	int iTeam  = GetTeam(client);
+
+	//Do we have any changes?
+	bool bChanges = false;
+
+	//Check cache for changes
+	if(g_iCachedValues[client][5] != iClass) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class", IntToStringEx(iClass)); bChanges = true;}
+	if(g_iCachedValues[client][6] != iTeam)  { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",  IntToStringEx(iTeam));  bChanges = true;}
+	
+	//Send changes
+	if(bChanges) {
+		SteamWorks_SendHTTPRequest(hRequest);
+		PrintToServer("%s %N", name, client);
+	}
+	
+	//Cache
+	g_iCachedValues[client][5] = iClass;
+	g_iCachedValues[client][6] = iTeam;
+	
 	delete hRequest;
 }
 
@@ -633,7 +615,6 @@ char[] IntToStringEx(int integer)
 	
 	return buffer;
 }
-
 
 stock int GetPlayerCount(bool bBots = false)
 {
