@@ -122,6 +122,14 @@ public void HeartBeat()
 	CreateTimer(30.0, Timer_HeartBeat);
 }
 
+//Throttle POST rape
+float g_flNextUpdate;
+
+public void OnMapStart()
+{
+	g_flNextUpdate = 0.0;
+}
+
 //Inform website that a player has joined
 public void OnClientAuthorized(int client, const char[] auth)
 {
@@ -183,16 +191,15 @@ public Action Timer_HeartBeat(Handle timer, any data)
 //4 iCurrencyCollected
 //5 iClass
 //6 iTeam
+//7 bAlive
 int g_iCachedValues[MAXPLAYERS + 1][10];
-
-
-//Throttle POST rape
-float g_flNextUpdate;
 
 public void OnGameFrame()
 {
 	if(g_flNextUpdate > GetGameTime())
 		return;
+
+	//PrintToServer("OnGameFrame() Update Data");
 
 	for (int client = 1; client <= MaxClients; client++)
 	{
@@ -220,9 +227,9 @@ public void OnGameFrame()
 		int iDamageBoss        = (GetEntProp(PlayerResource, Prop_Send, "m_iDamageBoss",        _, client));
 		int iHealing           = (GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client));
 		int iCurrencyCollected = (GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client));
-		
-		int iClass = view_as<int>(TF2_GetPlayerClass(client))
-		int iTeam  = GetTeam(client);
+		int iClass             = (GetEntProp(PlayerResource, Prop_Send, "m_iPlayerClass",       _, client));
+		int iTeam              = GetTeam(client);
+		int bAlive             = (GetEntProp(PlayerResource, Prop_Send, "m_bAlive",             _, client)); 
 		
 		//Do we have any changes?
 		bool bChanges = false;
@@ -235,10 +242,13 @@ public void OnGameFrame()
 		if(g_iCachedValues[client][4] != iCurrencyCollected) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "money",   IntToStringEx(iCurrencyCollected)); bChanges = true;}
 		if(g_iCachedValues[client][5] != iClass)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class",   IntToStringEx(iClass));             bChanges = true;}
 		if(g_iCachedValues[client][6] != iTeam)              { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",    IntToStringEx(iTeam));              bChanges = true;}
+		if(g_iCachedValues[client][7] != bAlive)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "alive",   IntToStringEx(bAlive));             bChanges = true;}
 		
 		//Send changes
 		if(bChanges) {
 			SteamWorks_SendHTTPRequest(hRequest);
+			
+			//PrintToServer("Changes for %N", client);
 		}
 		
 		//Cache
@@ -249,6 +259,7 @@ public void OnGameFrame()
 		g_iCachedValues[client][4] = iCurrencyCollected;
 		g_iCachedValues[client][5] = iClass;
 		g_iCachedValues[client][6] = iTeam;
+		g_iCachedValues[client][7] = bAlive;
 		
 		delete hRequest;
 		
