@@ -102,8 +102,22 @@ public void HeartBeat()
 	char serverName[PLATFORM_MAX_PATH];
 	FindConVar("hostname").GetString(serverName, PLATFORM_MAX_PATH);
 	
-	char servermap[64];
-	GetCurrentMap(servermap, sizeof(servermap));
+	char servermap[128];
+	
+	int objRes = FindEntityByClassname(-1, "tf_objective_resource");
+	
+	if(GameRules_GetProp("m_bPlayingMannVsMachine") && IsValidEntity(objRes)) 
+	{
+		//Send popfile name instead of map name for MvM for better info
+		GetEntPropString(objRes, Prop_Send, "m_iszMvMPopfileName", servermap, sizeof(servermap));
+		
+		ReplaceString(servermap, sizeof(servermap), "scripts/population/", "", false);
+		ReplaceString(servermap, sizeof(servermap), ".pop", "", false);
+	} 
+	else 
+	{
+		GetCurrentMap(servermap, sizeof(servermap));
+	}
 
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "hostname", serverName);
 	SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "playercount", IntToStringEx(GetPlayerCount()));
