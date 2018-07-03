@@ -200,7 +200,37 @@ public void OnGameFrame()
 		return;
 
 	//PrintToServer("OnGameFrame() Update Data");
-
+	
+	/*
+		Container => array(
+			STEAMID => array(
+				score   => value
+				damage  => value
+				tank    => value
+				healing => value
+				class   => value
+				team    => value
+				alive   => value
+			),
+			STEAMID => array(
+				score   => value
+				damage  => value
+				tank    => value
+				healing => value
+				class   => value
+				team    => value
+				alive   => value
+			),
+		)
+	*/
+	
+	Handle hRequest = CreatePostRequest(URL_INFO);
+	if(hRequest == null)
+		return;
+	
+	//Do we have any changes?
+	bool bChanges = false;
+	
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		if(!IsClientInGame(client))
@@ -209,17 +239,13 @@ public void OnGameFrame()
 		if(IsFakeClient(client))
 			continue;
 		
-		char auth64[64];
+		char auth64[PLATFORM_MAX_PATH];
 		if(!GetClientAuthId(client, AuthId_SteamID64, auth64, sizeof(auth64)))
 			continue;
-			
-		Handle hRequest = CreatePostRequest(URL_INFO);
-		if(hRequest == null)
-			continue;
-	
-		int PlayerResource = GetPlayerResourceEntity();
 		
-		SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "steam64", auth64);
+		Format(auth64, sizeof(auth64), "info[%s]", auth64);
+		
+		int PlayerResource = GetPlayerResourceEntity();
 	
 		//Get
 		int iTotalScore        = (GetEntProp(PlayerResource, Prop_Send, "m_iTotalScore",        _, client));
@@ -228,28 +254,18 @@ public void OnGameFrame()
 		int iHealing           = (GetEntProp(PlayerResource, Prop_Send, "m_iHealing",           _, client));
 		int iCurrencyCollected = (GetEntProp(PlayerResource, Prop_Send, "m_iCurrencyCollected", _, client));
 		int iClass             = (GetEntProp(PlayerResource, Prop_Send, "m_iPlayerClass",       _, client));
-		int iTeam              = GetTeam(client);
+		int iTeam              = (GetTeam(client));
 		int bAlive             = (GetEntProp(PlayerResource, Prop_Send, "m_bAlive",             _, client)); 
 		
-		//Do we have any changes?
-		bool bChanges = false;
-		
 		//Check cache for changes
-		if(g_iCachedValues[client][0] != iTotalScore)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "score",   IntToStringEx(iTotalScore));        bChanges = true;}
-		if(g_iCachedValues[client][1] != iDamage)            { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "damage",  IntToStringEx(iDamage));            bChanges = true;}
-		if(g_iCachedValues[client][2] != iDamageBoss)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "tank",    IntToStringEx(iDamageBoss));        bChanges = true;}
-		if(g_iCachedValues[client][3] != iHealing)           { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "healing", IntToStringEx(iHealing));           bChanges = true;}
-		if(g_iCachedValues[client][4] != iCurrencyCollected) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "money",   IntToStringEx(iCurrencyCollected)); bChanges = true;}
-		if(g_iCachedValues[client][5] != iClass)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "class",   IntToStringEx(iClass));             bChanges = true;}
-		if(g_iCachedValues[client][6] != iTeam)              { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "team",    IntToStringEx(iTeam));              bChanges = true;}
-		if(g_iCachedValues[client][7] != bAlive)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "alive",   IntToStringEx(bAlive));             bChanges = true;}
-		
-		//Send changes
-		if(bChanges) {
-			SteamWorks_SendHTTPRequest(hRequest);
-			
-			//PrintToServer("Changes for %N", client);
-		}
+		if(g_iCachedValues[client][0] != iTotalScore)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[score]"),   IntToStringEx(iTotalScore));        bChanges = true;}
+		if(g_iCachedValues[client][1] != iDamage)            { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[damage]"),  IntToStringEx(iDamage));            bChanges = true;}
+		if(g_iCachedValues[client][2] != iDamageBoss)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[tank]"),    IntToStringEx(iDamageBoss));        bChanges = true;}
+		if(g_iCachedValues[client][3] != iHealing)           { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[healing]"), IntToStringEx(iHealing));           bChanges = true;}
+		if(g_iCachedValues[client][4] != iCurrencyCollected) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[money]"),   IntToStringEx(iCurrencyCollected)); bChanges = true;}
+		if(g_iCachedValues[client][5] != iClass)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[pclass]"),  IntToStringEx(iClass));             bChanges = true;}
+		if(g_iCachedValues[client][6] != iTeam)              { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[team]"),    IntToStringEx(iTeam));              bChanges = true;}
+		if(g_iCachedValues[client][7] != bAlive)             { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(auth64, "[alive]"),   IntToStringEx(bAlive));             bChanges = true;}
 		
 		//Cache
 		g_iCachedValues[client][0] = iTotalScore;
@@ -260,12 +276,24 @@ public void OnGameFrame()
 		g_iCachedValues[client][5] = iClass;
 		g_iCachedValues[client][6] = iTeam;
 		g_iCachedValues[client][7] = bAlive;
-		
-		delete hRequest;
-		
+
 	}
 	
-	g_flNextUpdate = GetGameTime() + 0.5;
+	//Send changes
+	if(bChanges) {
+		SteamWorks_SendHTTPRequest(hRequest);
+	}
+	
+	delete hRequest;
+	
+	g_flNextUpdate = GetGameTime() + 1.0;
+}
+
+stock char[] FormatStringInline(const char[] pretext, const char[] postpretext)
+{
+	char s[PLATFORM_MAX_PATH];
+	Format(s, PLATFORM_MAX_PATH, "%s%s", pretext, postpretext);
+	return s;
 }
 
 public void Event_Death(Event event, const char[] name, bool dontBroadcast)
