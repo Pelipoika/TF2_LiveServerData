@@ -19,6 +19,7 @@
 	#define URL_JOIN  "http://localhost:3008/playerjoin"
 	#define URL_LEAVE "http://localhost:3008/playerleave"
 	#define URL_INFO  "http://localhost:3008/infochanged"
+	#define URL_WAVE  "http://localhost:3008/wavechanged"
 #else
 	#define URL_CHAT  "https://killfeed.herokuapp.com/chat"
 	#define URL_FEED  "https://killfeed.herokuapp.com/feed"
@@ -26,6 +27,7 @@
 	#define URL_JOIN  "https://killfeed.herokuapp.com/playerjoin"
 	#define URL_LEAVE "https://killfeed.herokuapp.com/playerleave"
 	#define URL_INFO  "https://killfeed.herokuapp.com/infochanged"
+	#define URL_WAVE  "https://killfeed.herokuapp.com/wavechanged"
 #endif
 
 public Plugin myinfo = 
@@ -133,15 +135,60 @@ public void HeartBeat()
 	delete hRequest;
 	
 	//Ping every 30 seconds
-	CreateTimer(30.0, Timer_HeartBeat);
+	CreateTimer(10.0, Timer_HeartBeat);
 }
 
 //Throttle POST rape
 float g_flNextUpdate;
 
+//- Scoreboard stuff
+//0 iTotalScore
+//1 iDamage
+//2 iDamageBoss
+//3 iHealing
+//4 iCurrencyCollected
+//5 iClass
+//6 iTeam
+//7 bAlive
+int g_iCachedValues[MAXPLAYERS + 1][10];
+
+//- MVM Wave HUD stuff
+//0 iCount
+//1 iFlags
+//2 iActive
+int g_iCachedWaveInfo[24][5] = {
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+    {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
+};
+
+//0 WaveNum
+//1 WaveNumMAx
+//2 m_nMvMEventPopfileType
+int g_iCachedBasicWaveInfo[3];
+
+//0 sIcon
+char g_iCachedWaveStrings[24][64];
+
 public void OnMapStart()
 {
 	g_flNextUpdate = 0.0;
+	
+	//Reset wave info.
+	for (int i = 0; i < sizeof(g_iCachedWaveInfo); i++) {
+		for (int o = 0; o < sizeof(g_iCachedWaveInfo[]); o++) {
+			//PrintToServer("[%i] [%i] = %i", i, o, g_iCachedWaveInfo[i][o]);
+			g_iCachedWaveInfo[i][o] = -1;
+		}
+	}
+	
+	//Reset wave info strings.
+	for (int i = 0; i < sizeof(g_iCachedWaveStrings); i++) {
+		g_iCachedWaveStrings[i] = "";
+	}
 }
 
 //Inform website that a player has joined
@@ -198,16 +245,6 @@ public Action Timer_HeartBeat(Handle timer, any data)
 	HeartBeat();
 }
 
-//0 iTotalScore
-//1 iDamage
-//2 iDamageBoss
-//3 iHealing
-//4 iCurrencyCollected
-//5 iClass
-//6 iTeam
-//7 bAlive
-int g_iCachedValues[MAXPLAYERS + 1][10];
-
 public void OnGameFrame()
 {
 	if(g_flNextUpdate > GetGameTime())
@@ -215,29 +252,15 @@ public void OnGameFrame()
 
 	//PrintToServer("OnGameFrame() Update Data");
 	
-	/*
-		Container => array(
-			STEAMID => array(
-				score   => value
-				damage  => value
-				tank    => value
-				healing => value
-				class   => value
-				team    => value
-				alive   => value
-			),
-			STEAMID => array(
-				score   => value
-				damage  => value
-				tank    => value
-				healing => value
-				class   => value
-				team    => value
-				alive   => value
-			),
-		)
-	*/
+	CheckPlayerData();
+	CheckWaveData();
+	CheckBasicWaveData();
 	
+	g_flNextUpdate = GetGameTime() + 1.0;
+}
+
+stock void CheckPlayerData()
+{
 	Handle hRequest = CreatePostRequest(URL_INFO);
 	if(hRequest == null)
 		return;
@@ -299,8 +322,109 @@ public void OnGameFrame()
 	}
 	
 	delete hRequest;
+}
+
+stock void CheckWaveData()
+{
+	int iResource = FindEntityByClassname(-1, "tf_objective_resource");
+	if(!IsValidEntity(iResource))
+		return;
+
+	Handle hRequest = CreatePostRequest(URL_WAVE);
+	if(hRequest == null)
+		return;
 	
-	g_flNextUpdate = GetGameTime() + 1.0;
+	//Do we have any changes?
+	bool bChanges = false;
+	
+	for (int i = 0; i < 24; i++)
+	{
+		//Get	
+		int iCount   = -1;
+		int iFlags   = -1;
+		int iActive  = -1;
+		
+		char sIcon[64]; 
+		
+		char column[PLATFORM_MAX_PATH]; 
+		Format(column, PLATFORM_MAX_PATH, "[%i]", i);
+		
+		bool bThis = false;
+		
+		if(i < 12)
+		{
+			iCount  = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveClassCounts", _, i)); 
+			iFlags  = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveClassFlags",  _, i));
+			iActive = (GetEntProp(iResource, Prop_Send, "m_bMannVsMachineWaveClassActive", _, i));
+			GetEntPropString(iResource, Prop_Data, "m_iszMannVsMachineWaveClassNames", sIcon, sizeof(sIcon), i);
+		}
+		else if (i < 24)
+		{
+			iCount  = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveClassCounts2", _, i - 12)); 
+			iFlags  = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveClassFlags2",  _, i - 12));
+			iActive = (GetEntProp(iResource, Prop_Send, "m_bMannVsMachineWaveClassActive2", _, i - 12));
+			GetEntPropString(iResource, Prop_Data, "m_iszMannVsMachineWaveClassNames2", sIcon, sizeof(sIcon), i - 12);
+		} 
+		
+		if(g_iCachedWaveInfo[i][0] != iCount)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[count]"),   IntToStringEx(iCount));  bThis = bChanges = true; }
+		if(g_iCachedWaveInfo[i][1] != iFlags)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[flags]"),   IntToStringEx(iFlags));  bThis = bChanges = true; }
+		if(g_iCachedWaveInfo[i][2] != iActive)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[active]"),  IntToStringEx(iActive)); bThis = bChanges = true; }
+		if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon);                  bThis = bChanges = true; }
+		
+		//Add array index to msg
+		if(bThis) {
+			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[idx]"), IntToStringEx(i));
+		}
+
+		//Cache
+		g_iCachedWaveInfo[i][0] = iCount;
+		g_iCachedWaveInfo[i][1] = iFlags;
+		g_iCachedWaveInfo[i][2] = iActive;
+		g_iCachedWaveStrings[i] = sIcon;
+	}
+
+	//Send changes
+	if(bChanges) {
+		SteamWorks_SendHTTPRequest(hRequest);
+	}
+	
+	delete hRequest;
+}
+
+stock void CheckBasicWaveData()
+{
+	int iResource = FindEntityByClassname(-1, "tf_objective_resource");
+	if(!IsValidEntity(iResource))
+		return;
+
+	Handle hRequest = CreatePostRequest(URL_WAVE);
+	if(hRequest == null)
+		return;
+	
+	//Do we have any changes?
+	bool bChanges = false;
+	
+	//Get
+	int iWave    = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveCount")); 
+	int iWaveMax = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineMaxWaveCount"));
+	int iPopType = (GetEntProp(iResource, Prop_Send, "m_nMvMEventPopfileType"));
+	
+	//Check
+	if(g_iCachedBasicWaveInfo[0] != iWave)    { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wave",    IntToStringEx(iWave));    bChanges = true;}
+	if(g_iCachedBasicWaveInfo[1] != iWaveMax) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wavemax", IntToStringEx(iWaveMax)); bChanges = true;}
+	if(g_iCachedBasicWaveInfo[2] != iPopType) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "poptype", IntToStringEx(iPopType)); bChanges = true;}
+
+	//Cache
+	g_iCachedBasicWaveInfo[0] = iWave;
+	g_iCachedBasicWaveInfo[1] = iWaveMax;
+	g_iCachedBasicWaveInfo[2] = iPopType;
+	
+	//Send
+	if(bChanges) {
+		SteamWorks_SendHTTPRequest(hRequest);
+	}
+	
+	delete hRequest;
 }
 
 stock char[] FormatStringInline(const char[] pretext, const char[] postpretext)
