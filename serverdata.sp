@@ -369,10 +369,14 @@ stock void CheckWaveData()
 		if(g_iCachedWaveInfo[i][0] != iCount)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[count]"),   IntToStringEx(iCount));  bThis = bChanges = true; }
 		if(g_iCachedWaveInfo[i][1] != iFlags)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[flags]"),   IntToStringEx(iFlags));  bThis = bChanges = true; }
 		if(g_iCachedWaveInfo[i][2] != iActive)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[active]"),  IntToStringEx(iActive)); bThis = bChanges = true; }
-		if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon);                  bThis = bChanges = true; }
+		
+		//if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon);                  bThis = bChanges = true; }
 		
 		//Add array index to msg
 		if(bThis) {
+			//Always send icon with every change
+			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon); 
+			
 			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[idx]"), IntToStringEx(i));
 		}
 
