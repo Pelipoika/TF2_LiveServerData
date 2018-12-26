@@ -134,8 +134,13 @@ public void HeartBeat()
 	
 	delete hRequest;
 	
-	//Ping every 30 seconds
-	CreateTimer(10.0, Timer_HeartBeat);
+	#if defined DEVELOPER
+		//Ping every 30 seconds
+		CreateTimer(1.0, Timer_HeartBeat);
+	#else
+		//Ping every 30 seconds
+		CreateTimer(10.0, Timer_HeartBeat);
+	#endif
 }
 
 //Throttle POST rape
@@ -367,7 +372,6 @@ stock void CheckWaveData()
 		} 
 		
 		if(g_iCachedWaveInfo[i][0] != iCount)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[count]"),   IntToStringEx(iCount));  bThis = bChanges = true; }
-		if(g_iCachedWaveInfo[i][1] != iFlags)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[flags]"),   IntToStringEx(iFlags));  bThis = bChanges = true; }
 		if(g_iCachedWaveInfo[i][2] != iActive)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[active]"),  IntToStringEx(iActive)); bThis = bChanges = true; }
 		
 		//if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon);                  bThis = bChanges = true; }
@@ -375,7 +379,10 @@ stock void CheckWaveData()
 		//Add array index to msg
 		if(bThis) {
 			//Always send icon with every change
-			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon); 
+			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"), sIcon); 
+			
+			//And flags...
+			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[flags]"), IntToStringEx(iFlags));
 			
 			SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[idx]"), IntToStringEx(i));
 		}
