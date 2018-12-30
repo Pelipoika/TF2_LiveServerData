@@ -170,10 +170,11 @@ int g_iCachedWaveInfo[24][5] = {
     {-1, ...}, {-1, ...}, {-1, ...}, {-1, ...},
 };
 
-//0 WaveNum
-//1 WaveNumMAx
+//0 m_nMannVsMachineWaveCount
+//1 m_nMannVsMachineMaxWaveCount
 //2 m_nMvMEventPopfileType
-int g_iCachedBasicWaveInfo[3];
+//3 m_nMannVsMachineWaveEnemyCount
+int g_iCachedBasicWaveInfo[4];
 
 //0 sIcon
 char g_iCachedWaveStrings[24][64];
@@ -371,10 +372,9 @@ stock void CheckWaveData()
 			GetEntPropString(iResource, Prop_Data, "m_iszMannVsMachineWaveClassNames2", sIcon, sizeof(sIcon), i - 12);
 		} 
 		
-		if(g_iCachedWaveInfo[i][0] != iCount)         { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[count]"),   IntToStringEx(iCount));  bThis = bChanges = true; }
-		if(g_iCachedWaveInfo[i][2] != iActive)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[active]"),  IntToStringEx(iActive)); bThis = bChanges = true; }
-		
-		//if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon);                  bThis = bChanges = true; }
+		if(g_iCachedWaveInfo[i][0] != iCount)  { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[count]"),  IntToStringEx(iCount));  bThis = bChanges = true; }
+		if(g_iCachedWaveInfo[i][2] != iActive) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[active]"), IntToStringEx(iActive)); bThis = bChanges = true; }		
+		//if(!StrEqual(g_iCachedWaveStrings[i], sIcon)) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, FormatStringInline(column, "[icon]"),    sIcon); bThis = bChanges = true; }
 		
 		//Add array index to msg
 		if(bThis) {
@@ -416,19 +416,22 @@ stock void CheckBasicWaveData()
 	bool bChanges = false;
 	
 	//Get
-	int iWave    = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveCount")); 
-	int iWaveMax = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineMaxWaveCount"));
-	int iPopType = (GetEntProp(iResource, Prop_Send, "m_nMvMEventPopfileType"));
+	int iWave           = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveCount")); 
+	int iWaveMax        = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineMaxWaveCount"));
+	int iPopType        = (GetEntProp(iResource, Prop_Send, "m_nMvMEventPopfileType"));
+	int iWaveEnemyCount = (GetEntProp(iResource, Prop_Send, "m_nMannVsMachineWaveEnemyCount"));
 	
 	//Check
-	if(g_iCachedBasicWaveInfo[0] != iWave)    { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wave",    IntToStringEx(iWave));    bChanges = true;}
-	if(g_iCachedBasicWaveInfo[1] != iWaveMax) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wavemax", IntToStringEx(iWaveMax)); bChanges = true;}
-	if(g_iCachedBasicWaveInfo[2] != iPopType) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "poptype", IntToStringEx(iPopType)); bChanges = true;}
+	if(g_iCachedBasicWaveInfo[0] != iWave)           { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wave",           IntToStringEx(iWave));           bChanges = true;}
+	if(g_iCachedBasicWaveInfo[1] != iWaveMax)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "wavemax",        IntToStringEx(iWaveMax));        bChanges = true;}
+	if(g_iCachedBasicWaveInfo[2] != iPopType)        { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "poptype",        IntToStringEx(iPopType));        bChanges = true;}
+	if(g_iCachedBasicWaveInfo[3] != iWaveEnemyCount) { SteamWorks_SetHTTPRequestGetOrPostParameter(hRequest, "waveenemycount", IntToStringEx(iWaveEnemyCount)); bChanges = true;}
 
 	//Cache
 	g_iCachedBasicWaveInfo[0] = iWave;
 	g_iCachedBasicWaveInfo[1] = iWaveMax;
 	g_iCachedBasicWaveInfo[2] = iPopType;
+	g_iCachedBasicWaveInfo[3] = iWaveEnemyCount;
 	
 	//Send
 	if(bChanges) {
