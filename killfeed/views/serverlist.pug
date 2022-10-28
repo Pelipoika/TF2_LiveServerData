@@ -1,0 +1,126 @@
+doctype html
+html
+	head
+		meta(charset="UTF-8")
+
+		title Killfeed
+
+		meta(name="author" content="Pelipoika")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+
+		link(href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
+
+		link(rel="stylesheet" href="css/normalize.css")
+		link(rel="stylesheet" href="css/skeleton.css")
+		link(rel="stylesheet" href="css/cc.css")
+		link(rel="stylesheet" href="css/animate.css")
+
+		script(src="/jquery/jquery.js")
+
+		link(rel="icon" type="image/png" href="images/eng_status_kills_icon.png")
+
+body
+	mixin HudDeathNotice(killer, killerteam = 0, killstreak, icon, icon_x, icon_y, icon_w, icon_h, previctimtext, victim, victimteam = 0, postvictimtext, bg_icon, bg_icon_x, bg_icon_y, bg_icon_w, bg_icon_h)
+		div(class="row")
+			div(class="u-pull-right")#hudDeathNotice
+				div(class=`team-${killerteam}`)#KillerName=killer
+
+				div &nbsp;
+
+				if killstreak > 0
+					//- Killstreaker number
+					div#KillstreakNumber=killstreak
+
+					//- Killstreaker icon
+					div#KillstreakContainer
+						img(align="middle" width="auto" height="32px" src="images/leaderboard_streak.png")#iconKillstreak
+
+				div &nbsp;
+
+				div#IconContainer
+					//- Center background to icon
+					-
+						var marginLeft = 0;
+						var bgIsBigger = (Number(bg_icon_w) > Number(icon_w));
+
+						//var isChrome = !!window.chrome && !!window.chrome.webstore;
+						if(!bgIsBigger) {
+							marginLeft = Math.abs(Number(icon_w / 2) - Number(bg_icon_w));
+						}
+
+					img(align="middle" style=`position: absolute; margin-left: ${marginLeft}px; padding: ${bg_icon_h / 2}px ${bg_icon_w / 2}px ${bg_icon_h / 2}px ${bg_icon_w / 2}px; background: url(images/${bg_icon}.png) -192px -409px`)#iconCritDeath
+
+					//- Icon
+					if icon.indexOf('d_images') == -1
+						img(align="middle" width="auto" height="32px" src=`images/${icon}.png`)#iconDeath
+					else
+						img(align="middle" style=`position: relative; z-index: 3; padding: ${icon_h / 2}px ${icon_w / 2}px ${icon_h / 2}px ${icon_w / 2}px; background: url(images/${icon}.png) -${icon_x}px -${icon_y}px;`)#iconDeath
+				
+				div &nbsp;
+
+				//- Pre victim text
+				div#PreVictimText=previctimtext
+
+				div &nbsp;
+
+				//- Victim name
+				div(class=`team-${victimteam}`)#VictimName=victim
+
+				div &nbsp;
+
+				//- Post victim text
+				div#PostVictimText=postvictimtext
+
+	div(class="container u-max-full-width u-full-width")
+		div(class="row" style="margin-right: 20px; margin-top: 12px" hidden)#examplesDiv
+
+			+HudDeathNotice("Pelipoika + NodeJS", "2", 666, "d_images", "0", "384", "96", "32", "", "Benoist", "3", "")
+			+HudDeathNotice("Pelipoika", "2", _, "leaderboard_dominated", "", "", "", "", "is DOMINATING", "Benoist", "3", "")
+			
+			+HudDeathNotice("Benoist", "3", _, "d_images", "116", "384", "48", "32", "", "Pelipoika", "2", "", "d_images", "192", "409", "64", "34")
+			+HudDeathNotice("Benoist", "3", _, "leaderboard_dominated", "", "", "", "", "got REVENGE on", "Pelipoika", "2", "")
+
+			+HudDeathNotice("MONOCULUS!", "4", _, "d_images_v3", "0", "160", "96", "32", "", "MERASMUS!", "5", "", "d_images", "192", "409", "64", "34")
+			+HudDeathNotice("", "", _, "d_images", "116", "288", "52", "32", "", "MERASMUS!", "5", "fell to a clumsy, painful death")
+
+		input(class="button-primary" style="margin: 0px; width: 100%" type="button" value="Toggle Examples" onclick="$( '#examplesDiv' ).toggle( 'slow' );")
+
+	div.container
+		each server in servers
+			div.twelve.columns#hudDeathNotice
+				div.server
+					h5
+						a(style="text-decoration: none; word-wrap: break-word;" href=`${server.serverid}`) #{server.hostname}
+				
+					-
+						function timeSince(date) {
+							var seconds = Math.floor((new Date() - date) / 1000);
+							
+							var interval = Math.floor(seconds / 3600);
+							if (interval > 1) { return interval + " hours"; }
+
+							interval = Math.floor(seconds / 60);
+							if (interval > 1) { return interval + " minutes"; }
+							
+							return Math.floor(seconds) + " seconds";
+						}
+					
+					table
+						tbody
+							if(server.playercount)
+								tr
+									td(style="text-align: right; color: #6c757d") Players 
+									td #{server.playercount} / #{server.maxplayers} 
+							
+							if(server.map)
+								tr
+									td(style="text-align: right; color: #6c757d") Map
+									td #{server.map}
+							
+							if(server.lastupdate)
+								tr
+									td(style="text-align: right; color: #6c757d") Pinged
+									td #{timeSince(server.lastupdate)} ago
+	
+	h6.GetPlugin Wish for your server to be on this list? 
+		a(href="https://github.com/Pelipoika/TF2_LiveServerData/releases/latest" style="text-decoration: none;text-align: right; color: #6c757d") Download the plugin

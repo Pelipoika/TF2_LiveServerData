@@ -1,0 +1,411 @@
+html {
+	background: url("/images/background.png") no-repeat center center fixed;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+}
+
+@font-face {
+	font-family: OCRA;
+	src: url('/fonts/ocra.ttf');
+}
+
+@font-face {
+	font-family: TF2;
+	src: url('/fonts/TF2.ttf');
+}
+
+@font-face {
+	font-family: tf2build;
+	src: url('/fonts/tf2build.ttf');
+}
+
+@font-face {
+	font-family: TF2secondary;
+	src: url('/fonts/TF2secondary.ttf');
+}
+
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;
+}
+
+#hudDeathNotice {
+	background-color: rgba(46, 43, 42, 220);
+	margin-top: 10px;
+	margin-right: 10px;
+	border-radius: 5px;
+	color: white;
+
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
+#hudDeathNotice>div {
+	display: inline-block;
+
+	vertical-align: middle;
+}
+
+#hudDeathNotice>div#KillstreakNumber {
+	padding-left: 10px;
+}
+
+#hudDeathNotice>div#KillerName {
+	padding-left: 25px;
+}
+
+#hudDeathNotice>div#PostVictimText {
+	padding-right: 25px;
+}
+
+.footer {
+	position: fixed;
+	left: 0;
+	bottom: 0;
+	width: 100%;
+
+	height: 25;
+	max-height: 25%;
+
+	overflow-y: hidden;
+
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-bottom: 10px;
+
+	word-wrap: break-word;
+}
+
+/*
+#hudDeathNotice > div#IconContainer > img#iconCritDeath {
+	-webkit-transform: scale(2, 1.0);
+	transform: scale(2, 1.0);
+}
+
+#hudDeathNotice > div#PreVictimText    { padding-left: 10px;  }
+#hudDeathNotice > div#IconContainer    { margin-left: 10px;   }
+*/
+
+.team-0 {
+	color: rgba(200, 200, 200, 127);
+}
+
+.team-1 {
+	color: rgba(200, 200, 200, 127);
+}
+
+.team-2 {
+	color: rgba(180, 92, 77, 255);
+}
+
+.team-3 {
+	color: rgba(104, 124, 155, 255);
+}
+
+.team-4 {
+	color: rgba(134, 80, 172, 255);
+}
+
+.team-5 {
+	color: rgba(112, 176, 74, 255);
+}
+
+.class {
+	background-image: url('/images/classes.png');
+	background-repeat: no-repeat;
+	background-size: 96px;
+	display: block;
+	width: 32px;
+	height: 32px;
+}
+
+.class-4 {
+	background-position: 0 0;
+}
+
+.class-9 {
+	background-position: -32px 0;
+}
+
+.class-6 {
+	background-position: -64px 0;
+}
+
+.class-5 {
+	background-position: 0 -32px;
+}
+
+.class-7 {
+	background-position: -32px -32px;
+}
+
+.class-1 {
+	background-position: -64px -32px;
+}
+
+.class-2 {
+	background-position: 0 -64px;
+}
+
+.class-3 {
+	background-position: -32px -64px;
+}
+
+.class-8 {
+	background-position: -64px -64px;
+}
+
+.server {
+	padding: 20px;
+}
+
+.server>p {
+	margin: 0;
+}
+
+.server>table {
+	margin: 0;
+}
+
+.server>h5 {
+	margin-bottom: 5px;
+}
+
+table>tbody>tr>td {
+	padding: 4px 8px;
+	border-bottom: 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+	WAVE HUD
+*/
+
+.wavehud {
+	text-align: center;
+	display: inline-block;
+	padding: 0px 20px;
+	color: rgba(200, 200, 200, 127);
+
+	background-color: rgba(0, 0, 0, 0.33);
+
+	border: 2px solid #D3C0A0;
+	border-radius: 10px;
+
+	min-width: 20%;
+}
+
+#progressbar {
+	background-color: #ECE2C8;
+	border-radius: 5px;
+
+	/* (height of inner div) / 2 + padding */
+
+	padding: 3px;
+}
+
+#progressbar>div {
+	background-color: #5A7A8F;
+	width: 0%;
+
+	height: 20px;
+	border-radius: 5px;
+}
+
+.waveBot {
+	display: inline-block;
+	padding: 3px;
+
+	font-family: TF2;
+	font-size: 1.5em;
+}
+
+.waveBot>p {
+	margin: 0;
+}
+
+.waveBotIcon {
+	position: relative;
+	padding: 4px;
+	display: inline-block;
+}
+
+.giant {
+	display: inline-block;
+	padding: 3px 3px;
+	border-radius: 4px;
+	background: #bf1603;
+}
+
+.normal {
+	display: inline-block;
+	padding: 3px 3px;
+	border-radius: 4px;
+	background: #ebe4ca;
+}
+
+.critical {
+	border-radius: 4px;
+
+	-webkit-animation: BOT-CRITICAL 0.5s infinite;
+	/* Safari 4+ */
+	-moz-animation: BOT-CRITICAL 0.5s infinite;
+	/* Fx 5+ */
+	-o-animation: BOT-CRITICAL 0.5s infinite;
+	/* Opera 12+ */
+	animation: BOT-CRITICAL 0.5s infinite;
+	/* IE 10+, Fx 29+ */
+}
+
+@keyframes BOT-CRITICAL {
+	0%,
+	49% {
+		box-shadow: 0 0 0 3px #009AC6
+	}
+
+	50%,
+	100% {
+		box-shadow: 0 0 0 3px #00CFEC
+	}
+}
+
+.waveBotIcon>img {
+	display: block;
+}
+
+.waveBotIcon>img.botIcon {
+	height: 32px;
+	width: auto;
+}
+
+.waveBotIcon>img.botIconBG {
+	height: 42px;
+	width: auto;
+}
+
+.waveBotIcon>img.botIconBG2 {
+	height: 44px;
+	width: auto;
+}
+
+.waveBotIcon>img:not(:first-child) {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.scoreboard {
+	z-index: 50;
+
+	position: absolute;
+	left: 0;
+	right: 0;
+
+	margin-top: 10px;
+
+	flex: 1 1 auto;
+	padding: 10px 30px;
+
+	background-color: rgba(0, 0, 0, 0.33);
+
+	border: 2px solid #D3C0A0;
+	border-radius: 10px;
+
+	display: flex;
+	flex-direction: column;
+
+	overflow-y: hidden;
+}
+
+.playerDead {
+	background-color: rgba(44, 44, 44, 0.342);
+	color: rgba(124, 124, 124, 127);
+}
+
+.avatar {
+	padding: 0;
+	float: right;
+}
+
+.scoreboard>table {
+	margin-bottom: 0px;
+}
+
+.scoreboardRow {
+	margin-top: 100px;
+}
+
+.scoreboard-tr>th {
+	padding: 0;
+
+	color: rgb(218, 218, 218);
+}
+
+.scoreboard-tr>th>h6 {
+	margin: 0;
+}
+
+.GetPlugin {
+	position: absolute;
+	bottom: 0;
+	right: 0;
+
+	margin-right: 20px;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+}
+
+::-webkit-scrollbar-track-piece {
+	background-color: #FFF;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #CBCBCB;
+	outline: 2px solid #FFF;
+	outline-offset: -2px;
+	border: .1px solid #B7B7B7;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: #909090;
+}

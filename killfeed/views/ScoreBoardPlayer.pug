@@ -1,0 +1,19 @@
+tr(id=steam64).scoreboardRow
+	- var divClassAndTeam = `scoreboardRow team-${team || 0} ${alive ? "" : "playerDead"}`;
+	- var url = `http://steamcommunity.com/profiles/${steam64}`;
+
+	tr(id=steam64 class=divClassAndTeam onclick=`window.open("${url}", "_blank");` style="cursor: pointer;")
+		- var style = "text-decoration: none; color: inherit;";
+		- var spanImageClass = `class class-${pclass || 0}`;
+
+		td.avatar
+			img(src=(!!alive) ? "" : "images/leaderboard_dead.png" height=32 width=auto)
+		td.name=(name || "")
+		td.playerClass
+			span(class=pclass ? spanImageClass : "")
+		td.score=(score || 0)
+		td.damage=(damage || 0)
+		td.tank=(tank || 0)
+		td.healing=(healing || 0)
+		td.support=(support || 0)
+		td.money=(money || 0)

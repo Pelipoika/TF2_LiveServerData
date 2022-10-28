@@ -1,0 +1,51 @@
+div(class="row")
+	div(class="u-pull-right")#hudDeathNotice
+		div(class=`team-${killerteam}`)#KillerName=killer
+
+		div &nbsp;
+
+		if killstreak > 0
+			//- Killstreaker number
+			div#KillstreakNumber=killstreak
+
+			//- Killstreaker icon
+			div#KillstreakContainer
+				img(align="middle" width="auto" height="32px" src="images/leaderboard_streak.png")#iconKillstreak
+
+		div &nbsp;
+
+		div#IconContainer
+			//- Center background to icon
+			-
+				var marginLeft = 0;
+				var bgIsBigger = (Number(bg_icon_w) > Number(icon_w));
+
+				var isChrome = !!window.chrome && !!window.chrome.webstore;
+
+				if(!bgIsBigger) {
+					marginLeft = Math.abs(Number(icon_w) - Number(bg_icon_w)) / 2;
+				}
+			
+			//- Death icon background image (crit, australium)
+			img(align="middle" style=`position: absolute; margin-left: ${marginLeft}px; padding: ${bg_icon_h / 2}px ${bg_icon_w / 2}px ${bg_icon_h / 2}px ${bg_icon_w / 2}px; background: url(images/${bg_icon}.png) -${bg_icon_x}px -${bg_icon_y}px`)#iconCritDeath
+
+			//- Death icon
+			if icon.indexOf('d_images') == -1
+				img(align="middle" width="auto" height="32px" src=`images/${icon}.png`)#iconDeath
+			else
+				img(align="middle" style=`position: relative; z-index: 3; padding: ${icon_h / 2}px ${icon_w / 2}px ${icon_h / 2}px ${icon_w / 2}px; background: url(images/${icon}.png) -${icon_x}px -${icon_y}px;`)#iconDeath
+		
+		div &nbsp;
+
+		//- Pre victim text
+		div#PreVictimText=previctimtext
+
+		div &nbsp;
+
+		//- Victim name
+		div(class=`team-${victimteam}`)#VictimName=victim
+
+		div &nbsp;
+
+		//- Post victim text
+		div#PostVictimText=postvictimtext

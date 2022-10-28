@@ -1,0 +1,150 @@
+doctype html
+html
+	head
+		meta(charset="UTF-8")
+
+		title Killfeed
+
+		meta(name="author" content="Pelipoika")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+
+		link(href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css")
+
+		link(rel="stylesheet" href="css/normalize.css")
+		link(rel="stylesheet" href="css/skeleton.css")
+		link(rel="stylesheet" href="css/cc.css")
+		link(rel="stylesheet" href="css/animate.css")
+
+		script(src="/socket.io/socket.io.js")
+		script(src="/jquery/jquery.js")
+
+		script(src="/js/HudDeathNotice.js")
+		script(src="/js/ChatMessage.js")
+		script(src="/js/ScoreBoardPlayer.js")
+		script(src="/js/contracker.js")
+		script(src="/js/HudWaveBot.js")
+
+		link(rel="icon" type="image/png" href="images/eng_status_kills_icon.png")
+body
+	mixin ChatMessage(message)
+		div(class="row")
+			p(style="margin: 0px; color: white")
+				span(class=`team-${message.team}`)
+					a(style="text-decoration: none; color: inherit;" href=`http://steamcommunity.com/profiles/${message.steam64}` target="_blank")=message.sender
+				=` : ${message.message}`
+
+	mixin ScoreBoardPlayer(message)
+		- var divClassAndTeam = `scoreboardRow team-${message.team || 0} ${message.alive ? "" : "playerDead"}`;
+		- var url = `http://steamcommunity.com/profiles/${message.steam64}`;
+
+		tr(id=message.steam64 class=divClassAndTeam onclick=`window.open("${url}", "_blank");` style="cursor: pointer;")
+			- var style = "text-decoration: none; color: inherit;";
+			- var spanImageClass = `class class-${message.pclass || 0}`;
+
+			td.avatar
+				img(src=(!!message.alive) ? "" : "images/leaderboard_dead.png" height=32 width=auto)
+			td.name=(message.name || "")
+			td.playerClass
+				span(class=message.pclass ? spanImageClass : "")
+			td.score=(message.score     || 0)
+			td.damage=(message.damage   || 0)
+			td.tank=(message.tank       || 0)
+			td.healing=(message.healing || 0)
+			td.support=(message.support || 0)
+			td.money=(message.money     || 0)
+
+	mixin HudWaveBot(bot)
+		if bot.count && bot.count > 0
+			- var bNormal          = (bot.flags & (1 << 0)) != 0;
+			- var bSupport         = (bot.flags & (1 << 1)) != 0;
+			- var bMission         = (bot.flags & (1 << 2)) != 0;
+			- var bMiniboss        = (bot.flags & (1 << 3)) != 0;
+			- var bCritical        = (bot.flags & (1 << 4)) != 0;
+			- var bSupportLimited  = (bot.flags & (1 << 5)) != 0;
+			
+			- var bIsAnyTypeOfSupport = (bSupport || bSupportLimited || bMission);
+
+			div.waveBot(data-bot-flags=bot.flags id = bot.idx)
+				div.waveBotIcon
+					-
+						let attributeClass = (bMiniboss && !bIsAnyTypeOfSupport ? "giant" : "normal");
+						if (bCritical) {
+							attributeClass += " critical";
+						}
+
+					img(src=`/images/leaderboard_class_${bot.icon}.png` class=attributeClass).botIcon
+
+				p(style=(bIsAnyTypeOfSupport ? ("opacity: 0;margin-top: -14px") : ("opacity: 1;margin-top: -14px")))#count=bot.count
+
+	header
+		h5(style="text-align:center;margin: 0")#hostname=server.hostname
+		p(style="text-align:center;margin: 0") 
+			span#playercount #{server.playercount} 
+			span=" / "
+			span#maxplayers #{server.maxplayers} 
+			span=" players on "
+			span#map #{server.map}
+
+	if waveinfo && server.map && server.map.startsWith("mvm_")
+		div(style="text-align: center;")
+			.wavehud
+				//- Wave number
+				.waveText
+					span!="WAVE&nbsp"
+					if (server.poptype && server.poptype != 0)
+						span#wave=`666`
+						span
+						span#wavemax
+					else 
+						span#wave=`${server.wave || 0}`
+						span!="&nbsp/&nbsp"
+						span#wavemax=`${server.wavemax || 0}`
+
+				if server.waveenemycount
+					//- Wave progress bar
+					#progressbar
+						div(data-waveenemycount=server.waveenemycount style=`width: 100%`)
+
+				//- Wave bots
+				.row.botContainer
+					each bot in waveinfo
+						+HudWaveBot(bot)
+
+	.container.scoreboard
+		table.u-full-width
+			thead
+				tr.scoreboard-tr
+					th
+						span
+					th 
+						h6 Name
+					th 
+						h6 Class
+					th 
+						h6 Score
+					th 
+						h6 Damage
+					th 
+						h6 Tank
+					th 
+						h6 Healing
+					th 
+						h6 Support
+					th 
+						h6 Money
+
+			tbody#playerlist
+				each player in players
+					+ScoreBoardPlayer(player)
+
+	//- Content homie
+	div(class="container u-max-full-width u-full-width")
+
+		//- Killfeed
+		#feed
+
+		//- Footer / Chat
+		div(class="footer" OnMouseOver="this.style.overflow='auto'" OnMouseOut="this.style.overflow='hidden'")#chatContainer
+			each message in messages
+				+ChatMessage(message)
+	
